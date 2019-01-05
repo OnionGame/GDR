@@ -1,0 +1,9 @@
+
+<h3>{{errorMsg}}</h3>
+
+
+
+<div class="board">
+  <div class="field" *ngFor="let field of getVisibleBoard(0,0)" (style)= "getColor(field.color)"  (mouseover)="onSelect(field)">{{field.cordX}},{{field.cordY}}</div>
+
+</div>
