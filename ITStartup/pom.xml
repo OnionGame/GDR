@@ -21,8 +21,10 @@
         </plugins>
     </build>
     <modules>
-        <module>it-startup-server</module>
+        <module>it-startup-core</module>
+        <module>it-startup-rmi</module>
     </modules>
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
