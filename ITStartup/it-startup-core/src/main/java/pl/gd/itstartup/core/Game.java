@@ -3,6 +3,7 @@ package pl.gd.itstartup.core;
 import com.google.common.collect.ImmutableList;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.DoOnStart;
+import pl.gd.itstartup.core.cards.actioncards.Outsourcing;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
@@ -77,9 +78,16 @@ public class Game implements Serializable {
     }
 
     public void putCardWithTransfer(String playerName, Card selectedCard, Card worker) {
-        getOpponentsOf(playerName).forEach(player -> player.removeCardsFromTable(ImmutableList.of(worker)));
+        Player opponent = getOpponentsOf(playerName).stream().filter(player -> player.hasCard(selectedCard)).findFirst().get();
+        Player player = getPlayerByName(playerName);
+        if (selectedCard instanceof Outsourcing) {
+            player.addOutsourcingCard(worker, opponent);
+        }
+        opponent.removeCardsFromTable(ImmutableList.of(worker));
         putCard(playerName, selectedCard);
-        getPlayerByName(playerName).addCardsToTable(ImmutableList.of(worker));
+
+        player.addCardsToTable(worker);
+
     }
 
     public void putKnowledgeCard(String playerName, KnowledgeCard selectedCard, ProgrammerCard programmerCard) {
@@ -97,6 +105,8 @@ public class Game implements Serializable {
         makeMovePlayer.addResources(getAmountOfResources());
         makeMovePlayer.addCardsToHand(getCardsFromStack(1));
         i++;
+
+        getOpponentsOf(playerName).forEach(p -> p.giveOtsourcingCard(player));
     }
 
     private int getAmountOfResources() {

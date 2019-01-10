@@ -1,5 +1,9 @@
 package pl.gd.itstartup.core;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multimap;
+import pl.gd.itstartup.core.cards.AdditionalPoints;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.Worker;
 import pl.gd.itstartup.core.cards.hrcards.HRCard;
@@ -8,9 +12,8 @@ import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
 import java.awt.*;
 import java.io.Serializable;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class Player implements Serializable {
@@ -18,16 +21,18 @@ public class Player implements Serializable {
     private String name;
     private List<Card> cardsOnHands = new ArrayList<Card>();
     private List<Card> cardsOnTable = new ArrayList<Card>();
+    private Multimap<Player, Card> outsourcing = HashMultimap.create();
     private int points = 0;
     private int resources = 0;
     private Color color;
     private int tourNumber = 1;
 
+
     public Player(String name) {
         this.name = name;
     }
 
-    public void setColor(Color color) {
+    void setColor(Color color) {
         this.color = color;
     }
 
@@ -55,22 +60,24 @@ public class Player implements Serializable {
         return resources;
     }
 
-    public void addCardsToHand(List<Card> cards) {
+    void addCardsToHand(List<Card> cards) {
         this.cardsOnHands.addAll(cards);
     }
 
-    public void removeCardsFromHand(List<Card> cards) {
-        this.cardsOnHands.removeAll(cards);
-    }
-    public void removeCardsFromTable(List<Card> cards) {
+
+    void removeCardsFromTable(List<Card> cards) {
         this.cardsOnTable.removeAll(cards);
     }
 
-    public void addCardsToTable(List<Card> cards) {
-        this.cardsOnTable.addAll(cards);
+    boolean hasCard(Card card) {
+        return this.cardsOnTable.contains(card);
     }
 
-    public void addPoints(int points) {
+    void addCardsToTable(Card card) {
+        this.cardsOnTable.add(card);
+    }
+
+    void addPoints(int points) {
         this.points += points;
     }
 
@@ -79,17 +86,17 @@ public class Player implements Serializable {
         this.resources += resources;
     }
 
-    public void removeResources(int resources) {
+    private void removeResources(int resources) {
         this.resources -= resources;
     }
 
-    public void putCard(Card selectedCard) {
+    void putCard(Card selectedCard) {
+        removeResources(selectedCard.getPrice());
         cardsOnHands.remove(selectedCard);
         cardsOnTable.add(selectedCard);
-        removeResources(selectedCard.getPrice());
     }
 
-    public List<Card> endTour() {
+    List<Card> endTour() {
         tourNumber++;
         List<ProgrammerCard> programmers = getProgrammerCards();
 
@@ -99,12 +106,16 @@ public class Player implements Serializable {
         addPoints(getKnowledgeCards().stream()
                 .mapToInt(KnowledgeCard::getPoints)
                 .sum());
+        int programersSize = getProgrammerCards().size();
+        getAdditionalCards().forEach(c -> addPoints(c.getAdditionalPoints() * programersSize));
+
         getCardsOnTable().forEach(Card::addBurnoutPoint);
         List<Card> burtCards = getCardsOnTable().stream().filter(Card::isBurnt).collect(Collectors.toList());
         cardsOnTable.removeAll(burtCards);
         return burtCards;
     }
-    public void clearTable(){
+
+    void clearTable() {
         cardsOnTable.clear();
     }
 
@@ -126,7 +137,7 @@ public class Player implements Serializable {
                 .collect(Collectors.toList());
     }
 
-    public List<HRCard> getHRCards() {
+    List<HRCard> getHRCards() {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof HRCard)
                 .map(card -> (HRCard) card)
@@ -136,6 +147,13 @@ public class Player implements Serializable {
     public List<Card> getWorkerCards() {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof Worker)
+                .collect(Collectors.toList());
+    }
+
+    private List<AdditionalPoints> getAdditionalCards() {
+        return getCardsOnTable().stream()
+                .filter(card -> card instanceof AdditionalPoints)
+                .map(card -> (AdditionalPoints) card)
                 .collect(Collectors.toList());
     }
 
@@ -159,5 +177,18 @@ public class Player implements Serializable {
                 ", cardsOnHands=" + cardsOnHands.size() +
                 ", cardsOnTable=" + cardsOnTable.size() +
                 '}';
+    }
+
+    void addOutsourcingCard(Card card, Player opponent) {
+        outsourcing.put(opponent, card);
+    }
+
+    public void giveOtsourcingCard(Player opponent) {
+//        if (outsourcing.containsKey(opponent)) {
+//            Card card = outsourcing.get(opponent);
+//            removeCardsFromTable(ImmutableList.of(card));
+//            opponent.addCardsToTable(card);
+//            outsourcing.remove(opponent, card);
+//        }
     }
 }
