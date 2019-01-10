@@ -1,6 +1,7 @@
 package pl.gd.itstartup.core;
 
 import pl.gd.itstartup.core.cards.Card;
+import pl.gd.itstartup.core.cards.Worker;
 import pl.gd.itstartup.core.cards.hrcards.HRCard;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
@@ -54,12 +55,19 @@ public class Player implements Serializable {
         return resources;
     }
 
-    public void addCards(List<Card> cards) {
+    public void addCardsToHand(List<Card> cards) {
         this.cardsOnHands.addAll(cards);
     }
 
-    public void removeCards(List<Card> cards) {
+    public void removeCardsFromHand(List<Card> cards) {
+        this.cardsOnHands.removeAll(cards);
+    }
+    public void removeCardsFromTable(List<Card> cards) {
         this.cardsOnTable.removeAll(cards);
+    }
+
+    public void addCardsToTable(List<Card> cards) {
+        this.cardsOnTable.addAll(cards);
     }
 
     public void addPoints(int points) {
@@ -96,6 +104,9 @@ public class Player implements Serializable {
         cardsOnTable.removeAll(burtCards);
         return burtCards;
     }
+    public void clearTable(){
+        cardsOnTable.clear();
+    }
 
     public int getTourNumber() {
         return tourNumber;
@@ -119,6 +130,12 @@ public class Player implements Serializable {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof HRCard)
                 .map(card -> (HRCard) card)
+                .collect(Collectors.toList());
+    }
+
+    public List<Card> getWorkerCards() {
+        return getCardsOnTable().stream()
+                .filter(card -> card instanceof Worker)
                 .collect(Collectors.toList());
     }
 

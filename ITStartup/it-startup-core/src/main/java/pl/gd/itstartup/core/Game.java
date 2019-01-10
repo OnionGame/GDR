@@ -2,15 +2,17 @@ package pl.gd.itstartup.core;
 
 import com.google.common.collect.ImmutableList;
 import pl.gd.itstartup.core.cards.Card;
-import pl.gd.itstartup.core.cards.hrcards.HRCard;
+import pl.gd.itstartup.core.cards.DoOnStart;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
 import java.awt.*;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Game implements Serializable {
 
@@ -47,7 +49,7 @@ public class Game implements Serializable {
         Player player = new Player(playerName);
         player.setColor(colors.get(players.size()));
         player.addPoints(100);
-        player.addCards(getCardsFromStack(10));
+        player.addCardsToHand(getCardsFromStack(10));
         players.add(player);
         makeMovePlayer = player;
         return player;
@@ -59,24 +61,41 @@ public class Game implements Serializable {
                 .findFirst().orElseThrow(() -> new RuntimeException("No player with name " + name));
     }
 
+    public List<Player> getOpponentsOf(String name) {
+        return players.stream()
+                .filter(player -> !player.getName().equals(name))
+                .collect(Collectors.toList());
+    }
+
+
     public void putCard(String playerName, Card selectedCard) {
-        getPlayerByName(playerName).putCard(selectedCard);
+        Player player = getPlayerByName(playerName);
+        player.putCard(selectedCard);
+        if (selectedCard instanceof DoOnStart) {
+            ((DoOnStart) selectedCard).doStaff(player, this);
+        }
+    }
+
+    public void putCardWithTransfer(String playerName, Card selectedCard, Card worker) {
+        getOpponentsOf(playerName).forEach(player -> player.removeCardsFromTable(ImmutableList.of(worker)));
+        putCard(playerName, selectedCard);
+        getPlayerByName(playerName).addCardsToTable(ImmutableList.of(worker));
     }
 
     public void putKnowledgeCard(String playerName, KnowledgeCard selectedCard, ProgrammerCard programmerCard) {
-        getPlayerByName(playerName).putCard(selectedCard);
+        putCard(playerName, selectedCard);
         selectedCard.setOwner(programmerCard);
     }
 
     public void end(String playerName) {
         Player player = getPlayerByName(playerName);
         List<Card> burtCards = player.endTour();
-        cardsOnStack.addAll(burtCards);
+        returnCardsOnStack(burtCards);
 
-        player.addCards(getCardsFromStack(player.getHRCards().size()));
+        player.addCardsToHand(getCardsFromStack(player.getHRCards().size()));
         makeMovePlayer = players.get(i % players.size());
         makeMovePlayer.addResources(getAmountOfResources());
-        makeMovePlayer.addCards(getCardsFromStack(1));
+        makeMovePlayer.addCardsToHand(getCardsFromStack(1));
         i++;
     }
 
@@ -90,5 +109,20 @@ public class Game implements Serializable {
 
     public Player getMakeMovePlayer() {
         return makeMovePlayer;
+    }
+
+    public void restart() {
+        List<Card> cards = players.stream()
+                .map(Player::getCardsOnTable)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        returnCardsOnStack(cards);
+        players.forEach(Player::clearTable);
+
+    }
+
+    private void returnCardsOnStack(List<Card> cards) {
+        cards.forEach(Card::removeBurnout);
+        cardsOnStack.addAll(cards);
     }
 }

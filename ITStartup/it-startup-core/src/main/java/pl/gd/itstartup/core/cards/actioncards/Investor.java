@@ -1,6 +1,10 @@
 package pl.gd.itstartup.core.cards.actioncards;
 
-public class Investor extends ActionCard {
+import pl.gd.itstartup.core.Game;
+import pl.gd.itstartup.core.Player;
+import pl.gd.itstartup.core.cards.DoOnStart;
+
+public class Investor extends ActionCard implements DoOnStart {
 
     @Override
     public int getPrice() {
@@ -15,5 +19,10 @@ public class Investor extends ActionCard {
     @Override
     public int howManyExistInPack() {
         return 4;
+    }
+
+    @Override
+    public void doStaff(Player player, Game game) {
+        player.addResources(2);
     }
 }

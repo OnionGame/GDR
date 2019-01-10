@@ -5,6 +5,8 @@ import pl.gd.itstartup.core.Game;
 import pl.gd.itstartup.core.Player;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.actioncards.ActionCard;
+import pl.gd.itstartup.core.cards.actioncards.HeadHunter;
+import pl.gd.itstartup.core.cards.hrcards.Rockstar;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 import pl.gd.itstartup.rmi.ITStartupRMIServerInterface;
@@ -15,6 +17,7 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.rmi.RemoteException;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
@@ -138,18 +141,9 @@ public class MainFrame extends JFrame {
         try {
 
             if (selectedCard instanceof KnowledgeCard) {
-                Map<Object, ProgrammerCard> byName = Maps.uniqueIndex(player.getProgrammerCards(), Object::toString);
-                if (byName.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
-                } else {
-                    Object[] possibleValues = byName.keySet().toArray();
-                    Object selectedValue = JOptionPane.showInputDialog(this,
-                            "Do kogo przypisać?", "",
-                            JOptionPane.QUESTION_MESSAGE, null,
-                            possibleValues, possibleValues[0]);
-                    ProgrammerCard programmerCard = byName.get(selectedValue);
-                    game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
-                }
+                handleKnowlagecard();
+            } else if (selectedCard instanceof Rockstar || selectedCard instanceof HeadHunter) {
+                handleTransferCard();
             } else {
                 game.putCard(player.getName(), selectedCard);
             }
@@ -159,6 +153,40 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private void handleKnowlagecard() {
+        Map<Object, ProgrammerCard> byName = Maps.uniqueIndex(player.getProgrammerCards(), Object::toString);
+        if (byName.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
+        } else {
+            Object[] possibleValues = byName.keySet().toArray();
+            Object selectedValue = JOptionPane.showInputDialog(this,
+                    "Do kogo przypisać?", "",
+                    JOptionPane.QUESTION_MESSAGE, null,
+                    possibleValues, possibleValues[0]);
+            ProgrammerCard programmerCard = byName.get(selectedValue);
+            game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
+        }
+    }
+
+    private void handleTransferCard() {
+        List<Card> workers = game.getOpponentsOf(player.getName()).stream()
+                .map(Player::getWorkerCards)
+                .filter(l -> l.size() > 3 || !(selectedCard instanceof Rockstar))
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+        Map<Object, Card> byName = Maps.uniqueIndex(workers, Object::toString);
+        if (byName.isEmpty()) {
+            game.putCard(player.getName(), selectedCard);
+        } else {
+            Object[] possibleValues = byName.keySet().toArray();
+            Object selectedValue = JOptionPane.showInputDialog(this,
+                    "Kogo chcesz zabrać?", "",
+                    JOptionPane.QUESTION_MESSAGE, null,
+                    possibleValues, possibleValues[0]);
+            Card worker = byName.get(selectedValue);
+            game.putCardWithTransfer(player.getName(), selectedCard, worker);
+        }
+    }
 
     private JPanel createCardsPanel(Player player, boolean areMyCards) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));

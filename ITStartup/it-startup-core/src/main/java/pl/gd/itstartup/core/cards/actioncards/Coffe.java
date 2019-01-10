@@ -1,6 +1,11 @@
 package pl.gd.itstartup.core.cards.actioncards;
 
-public class Coffe extends ActionCard {
+import pl.gd.itstartup.core.Game;
+import pl.gd.itstartup.core.Player;
+import pl.gd.itstartup.core.cards.Card;
+import pl.gd.itstartup.core.cards.DoOnStart;
+
+public class Coffe extends ActionCard implements DoOnStart {
 
     @Override
     public int getPrice() {
@@ -15,5 +20,10 @@ public class Coffe extends ActionCard {
     @Override
     public int howManyExistInPack() {
         return 1;
+    }
+
+    @Override
+    public void doStaff(Player player, Game game) {
+        player.getCardsOnTable().forEach(Card::removeBurnoutPoint);
     }
 }
