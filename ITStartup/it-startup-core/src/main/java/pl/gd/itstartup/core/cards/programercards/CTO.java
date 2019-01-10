@@ -1,20 +1,25 @@
 package pl.gd.itstartup.core.cards.programercards;
 
-public class QAWizzard extends ProgrammerCard {
+public class CTO extends ProgrammerCard {
 
     @Override
     public int getPrice() {
-        return 3;
+        return 5;
+    }
+
+    @Override
+    public int howManyExistInPack() {
+        return 1;
     }
 
     @Override
     protected String getName() {
-        return "QA Wizzard Engineer";
+        return "Asertywny CTO";
     }
 
     @Override
     public int getPoints() {
-        return 2;
+        return 4;
     }
 
 }

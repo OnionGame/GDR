@@ -9,10 +9,6 @@ public abstract class KnowledgeCard extends Card {
 
     private Card owner;
 
-    public KnowledgeCard(int id) {
-        super(id);
-    }
-
     public int getPoints() {
         return getPrice() + 1;
     }
@@ -24,7 +20,7 @@ public abstract class KnowledgeCard extends Card {
 
     @Override
     public int howManyExistInPack() {
-        return 2;
+        return 1;
     }
 
     @Override

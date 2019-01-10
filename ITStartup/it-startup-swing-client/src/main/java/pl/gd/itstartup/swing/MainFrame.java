@@ -36,7 +36,7 @@ public class MainFrame extends JFrame {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             setUIFont();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         this.server = server;
         this.game = server.getGame();     //   game = new Game();
@@ -57,7 +57,7 @@ public class MainFrame extends JFrame {
             game = server.getGame();
             player = game.getPlayerByName(player.getName());
         } catch (RemoteException e) {
-            e.printStackTrace();
+            throw new RuntimeException(e);
         }
         isSelected = false;
         remove(cardsPanel);
@@ -79,7 +79,6 @@ public class MainFrame extends JFrame {
         myCardPanel.setBackground(Color.magenta);
         cardsPanel.add(toScroll(myCardPanel));
         add(cardsPanel, BorderLayout.CENTER);
-
     }
 
     private JScrollPane toScroll(JPanel panel) {
@@ -117,44 +116,46 @@ public class MainFrame extends JFrame {
         descriptionPanel.add(statistics, BorderLayout.EAST);
         descriptionPanel.add(new JLabel("<html>Ilość zasobów:<b>" + player.getResources() + "</b></html>"), BorderLayout.WEST);
         add(descriptionPanel, BorderLayout.NORTH);
+
     }
 
     private void onEnd() {
-        Object[] options = {"TAK", "NIE"};
-        int option = JOptionPane.showOptionDialog(null, "Na pewno", "",
-                JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
-                null, options, options[0]);
-        if (JOptionPane.YES_OPTION == option) {
-            game.end(player.getName());
-        }
         try {
+            Object[] options = {"TAK", "NIE"};
+            int option = JOptionPane.showOptionDialog(null, "Na pewno", "",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                    null, options, options[0]);
+            if (JOptionPane.YES_OPTION == option) {
+                game.end(player.getName());
+            }
             server.refresh(game);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void onPut() {
-        if (selectedCard instanceof KnowledgeCard) {
-            Map<Object, ProgrammerCard> byName = Maps.uniqueIndex(player.getProgrammersOnTable(), Object::toString);
-            if (byName.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
-            } else {
-                Object[] possibleValues = byName.keySet().toArray();
-                Object selectedValue = JOptionPane.showInputDialog(this,
-                        "Do kogo przypisać?", "",
-                        JOptionPane.QUESTION_MESSAGE, null,
-                        possibleValues, possibleValues[0]);
-                ProgrammerCard programmerCard = byName.get(selectedValue);
-                game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
-            }
-        } else {
-            game.putCard(player.getName(), selectedCard);
-        }
         try {
+
+            if (selectedCard instanceof KnowledgeCard) {
+                Map<Object, ProgrammerCard> byName = Maps.uniqueIndex(player.getProgrammerCards(), Object::toString);
+                if (byName.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    Object[] possibleValues = byName.keySet().toArray();
+                    Object selectedValue = JOptionPane.showInputDialog(this,
+                            "Do kogo przypisać?", "",
+                            JOptionPane.QUESTION_MESSAGE, null,
+                            possibleValues, possibleValues[0]);
+                    ProgrammerCard programmerCard = byName.get(selectedValue);
+                    game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
+                }
+            } else {
+                game.putCard(player.getName(), selectedCard);
+            }
             server.refresh(game);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, e, "", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -267,4 +268,5 @@ public class MainFrame extends JFrame {
     public String getPlayerName() {
         return player.getName();
     }
+
 }

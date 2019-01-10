@@ -1,6 +1,6 @@
 package pl.gd.itstartup.core.cards.hrcards;
 
-public class NiceGentleman extends HRCard {
+public class NiceLady extends HRCard {
 
 
     @Override
@@ -20,6 +20,6 @@ public class NiceGentleman extends HRCard {
 
     @Override
     protected String getName() {
-        return "Miły Pan z HR";
+        return "Miła Pani z HR";
     }
 }

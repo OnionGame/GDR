@@ -22,7 +22,7 @@
     </build>
     <modules>
         <module>it-startup-core</module>
-        <module>it-startup-rmi</module>
+        <module>it-startup-swing-client</module>
     </modules>
 
     <dependencies>

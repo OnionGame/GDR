@@ -1,15 +1,15 @@
 package pl.gd.itstartup.core.cards.hrcards;
 
-public class Rockstar extends HRCard {
+public class OfficeManager extends HRCard {
 
 
     @Override
     public int getPrice() {
-        return 3;
+        return 2;
     }
 
     @Override
     protected String getName() {
-        return "Rockstar Recruiter";
+        return "Office Manager";
     }
 }

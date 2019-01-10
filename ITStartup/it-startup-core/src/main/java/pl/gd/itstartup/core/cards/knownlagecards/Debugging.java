@@ -1,12 +1,12 @@
 package pl.gd.itstartup.core.cards.knownlagecards;
 
-public class DomainKnowledge extends KnowledgeCard {
+public class Debugging extends KnowledgeCard {
     @Override
     public int getPrice() {
-        return 3;
+        return 2;
     }
     @Override
     protected String getName() {
-        return "Wiedza domenowa";
+        return "Debugowanie";
     }
 }

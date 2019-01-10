@@ -2,6 +2,7 @@ package pl.gd.itstartup.core;
 
 import com.google.common.collect.ImmutableList;
 import pl.gd.itstartup.core.cards.Card;
+import pl.gd.itstartup.core.cards.hrcards.HRCard;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
@@ -10,7 +11,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Game implements Serializable {
 
@@ -24,8 +24,10 @@ public class Game implements Serializable {
         try {
             cardsOnStack = CardsFactory.createCards();
             Collections.shuffle(cardsOnStack);
+
         } catch (Exception e) {
             e.printStackTrace();
+            throw new RuntimeException(e);
         }
 
     }
@@ -67,11 +69,23 @@ public class Game implements Serializable {
     }
 
     public void end(String playerName) {
-        List<Card> burtCards = getPlayerByName(playerName).endTour();
+        Player player = getPlayerByName(playerName);
+        List<Card> burtCards = player.endTour();
         cardsOnStack.addAll(burtCards);
-        makeMovePlayer = players.get(i % players.size());
-        i++;
 
+        player.addCards(getCardsFromStack(player.getHRCards().size()));
+        makeMovePlayer = players.get(i % players.size());
+        makeMovePlayer.addResources(getAmountOfResources());
+        makeMovePlayer.addCards(getCardsFromStack(1));
+        i++;
+    }
+
+    private int getAmountOfResources() {
+        int tourNumber = makeMovePlayer.getTourNumber();
+        if (tourNumber > 8) {
+            return 8;
+        }
+        return tourNumber;
     }
 
     public Player getMakeMovePlayer() {

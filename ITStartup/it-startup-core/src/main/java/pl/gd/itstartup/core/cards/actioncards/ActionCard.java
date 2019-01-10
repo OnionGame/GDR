@@ -6,9 +6,6 @@ import pl.gd.itstartup.core.cards.CardType;
 public abstract class ActionCard extends Card {
 
 
-    public ActionCard(int id) {
-        super(id);
-    }
     @Override
     public int getMaxBurnoutPoints() {
         return 1;

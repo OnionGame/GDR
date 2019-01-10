@@ -2,11 +2,9 @@ package pl.gd.itstartup.core.cards.hrcards;
 
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.CardType;
+import pl.gd.itstartup.core.cards.Worker;
 
-public abstract class HRCard extends Card {
-    public HRCard(int id) {
-        super(id);
-    }
+public abstract class HRCard extends Card implements Worker {
 
     @Override
     public CardType getType() {

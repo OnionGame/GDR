@@ -23,14 +23,12 @@ public class ITStartupRMIServerServerImpl extends UnicastRemoteObject implements
     }
 
     @Override
-    public void addClient(ITStartupRMIClientInterface client) {
-        try {
-            clients.add(client);
-            game.addPlayer(client.getPlayerName());
-            refresh(game);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+    public void addClient(ITStartupRMIClientInterface client) throws RemoteException {
+
+        clients.add(client);
+        game.addPlayer(client.getPlayerName());
+        refresh(game);
+
     }
 
     @Override

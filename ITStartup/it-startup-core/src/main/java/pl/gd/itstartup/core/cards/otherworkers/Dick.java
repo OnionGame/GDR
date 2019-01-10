@@ -4,23 +4,19 @@ import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.CardType;
 import pl.gd.itstartup.core.cards.Worker;
 
-public class ScrumMaster extends Card implements Worker {
-
-    public int getMaxBurnoutPoints() {
-        return 4;
-    }
+public class Dick extends Card implements Worker {
 
     public int getPrice() {
-        return 4;
+        return 3;
     }
 
     protected String getName() {
-        return "Scrum Master";
+        return "Tajniak z HR-u";
     }
 
     @Override
     public CardType getType() {
-        return CardType.SCRUM_MASTER;
+        return CardType.HR;
     }
     @Override
     public int howManyExistInPack() {

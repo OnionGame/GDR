@@ -1,6 +1,7 @@
 package pl.gd.itstartup.core;
 
 import pl.gd.itstartup.core.cards.Card;
+import pl.gd.itstartup.core.cards.hrcards.HRCard;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
@@ -82,7 +83,9 @@ public class Player implements Serializable {
 
     public List<Card> endTour() {
         tourNumber++;
-        addPoints(getProgrammersOnTable().stream()
+        List<ProgrammerCard> programmers = getProgrammerCards();
+
+        addPoints(programmers.stream()
                 .mapToInt(ProgrammerCard::getPoints)
                 .sum());
         addPoints(getKnowledgeCards().stream()
@@ -98,7 +101,7 @@ public class Player implements Serializable {
         return tourNumber;
     }
 
-    public List<ProgrammerCard> getProgrammersOnTable() {
+    public List<ProgrammerCard> getProgrammerCards() {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof ProgrammerCard)
                 .map(card -> (ProgrammerCard) card)
@@ -109,6 +112,13 @@ public class Player implements Serializable {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof KnowledgeCard)
                 .map(card -> (KnowledgeCard) card)
+                .collect(Collectors.toList());
+    }
+
+    public List<HRCard> getHRCards() {
+        return getCardsOnTable().stream()
+                .filter(card -> card instanceof HRCard)
+                .map(card -> (HRCard) card)
                 .collect(Collectors.toList());
     }
 

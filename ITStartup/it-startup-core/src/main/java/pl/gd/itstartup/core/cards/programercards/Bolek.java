@@ -1,20 +1,15 @@
 package pl.gd.itstartup.core.cards.programercards;
 
-public class CopyPasteDeveloper extends ProgrammerCard {
+public class Bolek extends ProgrammerCard {
 
     @Override
     public int getPrice() {
-        return 1;
+        return 2;
     }
 
     @Override
     protected String getName() {
-        return "Copy Paste Developer";
-    }
-
-    @Override
-    public int getMaxBurnoutPoints() {
-        return 3;
+        return "Code Monkey \"Bolek\"";
     }
 
     @Override

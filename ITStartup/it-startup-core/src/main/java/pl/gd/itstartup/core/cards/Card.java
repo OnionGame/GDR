@@ -4,11 +4,19 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public abstract class Card implements Serializable, Comparable<Card> {
-    protected final int id;
+    protected int id;
     private int burnoutPoints = 0;
 
-    public Card(int id) {
+    public void setId(int id) {
         this.id = id;
+    }
+
+    public int howManyExistInPack() {
+        return 2;
+    }
+
+    public int getMaxBurnoutPoints() {
+        return 3;
     }
 
     public Integer getId() {
@@ -29,20 +37,12 @@ public abstract class Card implements Serializable, Comparable<Card> {
         return burnoutPoints--;
     }
 
-    public int getMaxBurnoutPoints() {
-        return 3;
-    }
-
     public int getBurnoutPoints() {
         return getMaxBurnoutPoints() - burnoutPoints;
     }
 
     public boolean isBurnt() {
         return getBurnoutPoints() == 0;
-    }
-
-    public int howManyExistInPack() {
-        return 2;
     }
 
 

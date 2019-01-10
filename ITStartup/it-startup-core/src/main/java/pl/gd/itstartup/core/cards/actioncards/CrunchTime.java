@@ -1,19 +1,19 @@
 package pl.gd.itstartup.core.cards.actioncards;
 
-public class Investor extends ActionCard {
+public class CrunchTime extends ActionCard {
 
     @Override
     public int getPrice() {
-        return 0;
+        return 2;
     }
 
     @Override
     protected String getName() {
-        return "Investor";
+        return "Crunch Time";
     }
 
     @Override
     public int howManyExistInPack() {
-        return 4;
+        return 1;
     }
 }
