@@ -4,7 +4,7 @@ public class Darek extends ProgrammerCard {
 
     @Override
     public int getPrice() {
-        return 1;
+        return 3;
     }
 
     @Override
@@ -14,7 +14,7 @@ public class Darek extends ProgrammerCard {
 
     @Override
     public int getPoints() {
-        return 3;
+        return 1;
     }
 
 

@@ -1,6 +1,8 @@
 package pl.gd.itstartup.core.cards.programercards;
 
-public class SeniorBackend extends ProgrammerCard {
+import pl.gd.itstartup.core.cards.AdditionalCards;
+
+public class SeniorBackend extends ProgrammerCard implements AdditionalCards {
 
     @Override
     public int getPrice() {
@@ -17,4 +19,13 @@ public class SeniorBackend extends ProgrammerCard {
         return 2;
     }
 
+    @Override
+    public int getAll() {
+        return 5;
+    }
+
+    @Override
+    public int getChoose() {
+        return 2;
+    }
 }

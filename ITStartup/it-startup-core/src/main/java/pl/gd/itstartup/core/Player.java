@@ -1,15 +1,19 @@
 package pl.gd.itstartup.core;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import pl.gd.itstartup.core.cards.AdditionalPoints;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.Worker;
+import pl.gd.itstartup.core.cards.actioncards.Holiday;
 import pl.gd.itstartup.core.cards.actioncards.Outsourcing;
 import pl.gd.itstartup.core.cards.hrcards.HRCard;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.otherworkers.Dick;
 import pl.gd.itstartup.core.cards.programercards.FrontendDev;
+import pl.gd.itstartup.core.cards.programercards.K15;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 import pl.gd.itstartup.core.cards.programercards.QAWizzard;
 
@@ -68,11 +72,11 @@ public class Player implements Serializable {
         return resources;
     }
 
-    public void addCardsToHand(List<Card> cards) {
+    public void addCardsToHand(Collection<? extends Card> cards) {
         this.cardsOnHands.addAll(cards);
     }
 
-    public void removeCardsFromTable(Collection<Card> cards) {
+    public void removeCardsFromTable(Collection<? extends Card> cards) {
         this.cardsOnTable.removeAll(cards);
     }
 
@@ -84,7 +88,7 @@ public class Player implements Serializable {
         this.cardsOnTable.add(card);
     }
 
-    private void addAllCardsToTable(Collection<Card> cards) {
+    void addAllCardsToTable(Collection<? extends Card> cards) {
         this.cardsOnTable.addAll(cards);
     }
 
@@ -102,13 +106,15 @@ public class Player implements Serializable {
 
     void putCard(Card selectedCard) {
         if (!(selectedCard instanceof Outsourcing)) {
-            removeResources(calculatePrice(selectedCard));
+            int price = calculatePrice(selectedCard);
+            Preconditions.checkArgument(price <= getResources(), "Lack of resources");
+            removeResources(price);
         }
         cardsOnHands.remove(selectedCard);
         cardsOnTable.add(selectedCard);
     }
 
-    private int calculatePrice(Card selectedCard) {
+    public int calculatePrice(Card selectedCard) {
         if (promotion.containsKey(selectedCard)) {
             return selectedCard.getPrice() - promotion.get(selectedCard);
         }
@@ -116,10 +122,18 @@ public class Player implements Serializable {
             int wizards = getWizzardsards().size();
             return selectedCard.getPrice() <= wizards ? 0 : selectedCard.getPrice() - wizards;
         }
+
         return selectedCard.getPrice();
     }
 
-    List<Card> endTour() {
+    public int calculateMovePrice(Card selectedCard) {
+        if (selectedCard instanceof KnowledgeCard && has15K()) {
+            return selectedCard.getPrice() <= 2 ? 0 : selectedCard.getPrice() - 2;
+        }
+        return selectedCard.getPrice();
+    }
+
+    void endTour() {
         tourNumber++;
         List<ProgrammerCard> programmers = getProgrammerCards();
 
@@ -131,13 +145,18 @@ public class Player implements Serializable {
                 .sum());
         int programersSize = getProgrammerCards().size();
         getAdditionalCards().forEach(c -> addPoints(c.getAdditionalPoints() * programersSize));
-        Optional.of(getFrontend()).ifPresent(frontendDev -> addPoints(frontendDev.getPoints()));
+        Optional.ofNullable(getFrontend()).ifPresent(frontendDev -> addPoints(frontendDev.getPoints()));
 
-        getCardsOnTable().forEach(Card::addBurnoutPoint);
+        if (!hasHoliday()) {
+            getCardsOnTable().forEach(Card::addBurnoutPoint);
+        }
+        promotion.clear();
+        Optional.ofNullable(getFrontend()).ifPresent(FrontendDev::clearPower);
+    }
+
+    List<Card> getBurntCards() {
         List<Card> burtCards = getCardsOnTable().stream().filter(Card::isBurnt).collect(Collectors.toList());
         cardsOnTable.removeAll(burtCards);
-        promotion.clear();
-        Optional.of(getFrontend()).ifPresent(FrontendDev::clearPower);
         return burtCards;
     }
 
@@ -156,7 +175,7 @@ public class Player implements Serializable {
                 .collect(Collectors.toList());
     }
 
-    private List<KnowledgeCard> getKnowledgeCards() {
+    List<KnowledgeCard> getKnowledgeCards() {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof KnowledgeCard)
                 .map(card -> (KnowledgeCard) card)
@@ -174,6 +193,31 @@ public class Player implements Serializable {
         return getCardsOnTable().stream()
                 .filter(card -> card instanceof Worker)
                 .collect(Collectors.toList());
+    }
+
+    public List<Card> getNoOutsourcingProgrammerCards() {
+        return getCardsOnTable().stream()
+                .filter(card -> !outsourcing.values().contains(card))
+                .filter(card -> card instanceof ProgrammerCard)
+                .collect(Collectors.toList());
+    }
+
+    public List<Card> getNoOutsourcingKnowledgeCardsToMove() {
+        return getCardsOnTable().stream()
+                .filter(card -> card instanceof KnowledgeCard)
+                .filter(card -> calculateMovePrice(card) <= getResources())
+                .collect(Collectors.toList());
+    }
+
+    public List<Card> getNoOutsourcingWorkerCards() {
+        return getCardsOnTable().stream()
+                .filter(card -> !outsourcing.values().contains(card))
+                .filter(card -> card instanceof Worker)
+                .collect(Collectors.toList());
+    }
+
+    List<Card> getOutsourcingCards() {
+        return ImmutableList.copyOf(outsourcing.values());
     }
 
     private List<AdditionalPoints> getAdditionalCards() {
@@ -205,8 +249,16 @@ public class Player implements Serializable {
         return getCardsOnTable().stream().anyMatch(card -> card instanceof FrontendDev);
     }
 
+    private boolean has15K() {
+        return getCardsOnTable().stream().anyMatch(card -> card instanceof K15);
+    }
+
+    private boolean hasHoliday() {
+        return getCardsOnTable().stream().anyMatch(card -> card instanceof Holiday);
+    }
+
     public FrontendDev getFrontend() {
-        return (FrontendDev) getCardsOnTable().stream().filter(card -> card instanceof FrontendDev).findFirst().get();
+        return (FrontendDev) getCardsOnTable().stream().filter(card -> card instanceof FrontendDev).findFirst().orElse(null);
     }
 
     public List<QAWizzard> getWizzardsards() {

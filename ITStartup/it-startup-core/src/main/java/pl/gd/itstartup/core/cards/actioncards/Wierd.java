@@ -23,5 +23,6 @@ public class Wierd extends ActionCard implements DoOnStart {
                 .map(Player::getCardsOnTable)
                 .flatMap(Collection::stream)
                 .forEach(Card::addBurnoutPoint);
+        game.burntOpponents(player.getName());
     }
 }

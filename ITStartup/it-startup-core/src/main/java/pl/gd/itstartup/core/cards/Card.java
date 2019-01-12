@@ -29,7 +29,7 @@ public abstract class Card implements Serializable, Comparable<Card> {
 
     public abstract CardType getType();
 
-    public void removeBurnout() {
+    public void clearBurnout() {
         burnoutPoints = 0;
     }
 
@@ -37,8 +37,10 @@ public abstract class Card implements Serializable, Comparable<Card> {
         return burnoutPoints++;
     }
 
-    public int removeBurnoutPoint() {
-        return burnoutPoints--;
+    public void removeBurnoutPoint() {
+        if (burnoutPoints > 0) {
+            burnoutPoints--;
+        }
     }
 
     public int getBurnoutPoints() {

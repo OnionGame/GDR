@@ -3,6 +3,7 @@ package pl.gd.itstartup.swing;
 import com.google.common.collect.Maps;
 import pl.gd.itstartup.core.Game;
 import pl.gd.itstartup.core.Player;
+import pl.gd.itstartup.core.cards.AdditionalCards;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.TransferCard;
 import pl.gd.itstartup.core.cards.actioncards.ActionCard;
@@ -11,6 +12,7 @@ import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 import pl.gd.itstartup.core.cards.programercards.Bolek;
 import pl.gd.itstartup.core.cards.programercards.Darek;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
+import pl.gd.itstartup.core.cards.programercards.ResearchEngineer;
 import pl.gd.itstartup.rmi.ITStartupRMIServerInterface;
 
 import javax.swing.*;
@@ -101,36 +103,48 @@ public class MainFrame extends JFrame {
         JButton putButton = new JButton("Połóż na stół");
         JButton randomButton = new JButton("Losuj za 1 zasób");
         JButton frontendDev = new JButton("+1 Zasób dla Nieasertywnego Deva");
+        JButton moveKnowlage = new JButton("Przenieś wiedzę");
 
         boolean isEnabled = game.getMakeMovePlayer().equals(player);
         endTour.setEnabled(isEnabled);
         putButton.setEnabled(isEnabled);
         randomButton.setVisible(isEnabled && player.hasDick() && player.getResources() > 0 && !wasRandom);
         frontendDev.setVisible(isEnabled && player.hasFrontend() && player.getResources() > 0 && !wasRandom);
+        boolean hasKnowlage = !player.getNoOutsourcingKnowledgeCardsToMove().isEmpty();
+        moveKnowlage.setVisible(isEnabled && hasKnowlage && player.getNoOutsourcingProgrammerCards().size() > 1);
 
         putButton.addActionListener(e -> onPut());
         endTour.addActionListener(e -> onEnd());
         randomButton.addActionListener(e -> onRandom());
         frontendDev.addActionListener(e -> onAddFrontend());
+        moveKnowlage.addActionListener(e -> onMoveKnowlage());
 
-        buttonsPanel.add(new JLabel("Tura numer: " + player.getTourNumber()));
-        buttonsPanel.add(new JLabel("Ruch wykonuje: " + game.getMakeMovePlayer().getName()));
+        buttonsPanel.add(new JLabel("<html>Tura numer: <b>" + player.getTourNumber()+"</b></html>"));
+        buttonsPanel.add(new JLabel("<html>Ruch wykonuje: <b>" + game.getMakeMovePlayer().getName()+"</b></html>"));
         buttonsPanel.add(putButton);
         buttonsPanel.add(endTour);
         buttonsPanel.add(randomButton);
         buttonsPanel.add(frontendDev);
+        buttonsPanel.add(moveKnowlage);
 
 
-        JPanel statistics = new JPanel();
-        statistics.setBorder(BorderFactory.createTitledBorder("<html><b>Punkty</b></html>"));
-        statistics.setLayout(new BoxLayout(statistics, BoxLayout.Y_AXIS));
+        JPanel resources = new JPanel();
+        resources.setBorder(BorderFactory.createTitledBorder("<html><b>Zasoby</b></html>"));
+        resources.setLayout(new BoxLayout(resources, BoxLayout.Y_AXIS));
         game.getPlayers().stream()
-                .map(this::createPlayerLabel)
-                .forEach(statistics::add);
+                .map(this::createPlayerLabelResources)
+                .forEach(resources::add);
+
+        JPanel points = new JPanel();
+        points.setBorder(BorderFactory.createTitledBorder("<html><b>Punkty</b></html>"));
+        points.setLayout(new BoxLayout(points, BoxLayout.Y_AXIS));
+        game.getPlayers().stream()
+                .map(this::createPlayerLabelPoints)
+                .forEach(points::add);
 
         descriptionPanel.add(buttonsPanel, BorderLayout.CENTER);
-        descriptionPanel.add(statistics, BorderLayout.EAST);
-        descriptionPanel.add(new JLabel("<html>Ilość zasobów:<b>" + player.getResources() + "</b></html>"), BorderLayout.WEST);
+        descriptionPanel.add(points, BorderLayout.EAST);
+        descriptionPanel.add(resources, BorderLayout.WEST);
         add(descriptionPanel, BorderLayout.NORTH);
 
     }
@@ -153,7 +167,10 @@ public class MainFrame extends JFrame {
 
     private void onPut() {
         try {
-
+            if (player.getResources() < player.calculatePrice(selectedCard)) {
+                JOptionPane.showMessageDialog(this, "Nie masz kasy :(", "", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
             if (selectedCard instanceof KnowledgeCard) {
                 handleKnowlagecard();
             } else if (selectedCard instanceof TransferCard) {
@@ -162,6 +179,10 @@ public class MainFrame extends JFrame {
                 handleDarekCard();
             } else if (selectedCard instanceof Bolek) {
                 handleBolekCard();
+            } else if (selectedCard instanceof AdditionalCards) {
+                handleAdditionalCard();
+            } else if (selectedCard instanceof ResearchEngineer) {
+                handleResarch();
             } else {
                 game.putCard(player.getName(), selectedCard);
             }
@@ -173,11 +194,11 @@ public class MainFrame extends JFrame {
 
     private void onRandom() {
         try {
-            Map<Object, Card> byName = getOpponentsProgrammers();
-            if (!byName.isEmpty()) {
+            List<Card> ipponents = getOpponentsProgrammers();
+            if (!ipponents.isEmpty()) {
                 if (new Random().nextBoolean()) {
                     JOptionPane.showMessageDialog(this, "Wygrana:)", "", JOptionPane.INFORMATION_MESSAGE);
-                    Card card = chooseWorker(byName);
+                    Card card = chooseCard(ipponents, "Wybierz karte pracownika przeciwnika");
                     game.getPlayerByName(player.getName()).removeResources(1);
                     game.transferCard(player.getName(), card);
 
@@ -187,7 +208,7 @@ public class MainFrame extends JFrame {
                 wasRandom = true;
                 server.refresh(game);
             } else {
-                JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.WARNING_MESSAGE);
             }
         } catch (Exception e) {
             error(e);
@@ -204,6 +225,18 @@ public class MainFrame extends JFrame {
         }
     }
 
+    private void onMoveKnowlage() {
+        try {
+            List<Card> knolwages = player.getNoOutsourcingKnowledgeCardsToMove();
+            Card knowlage = chooseCard(knolwages, "Którą kartę wiedzy przeniść");
+            List<Card> programmers = player.getNoOutsourcingProgrammerCards();
+            Card programer = chooseCard(programmers, "Na kogo przenieść");
+            game.moveKnowlage(player.getName(), (KnowledgeCard) knowlage, programer);
+            server.refresh(game);
+        } catch (Exception e) {
+            error(e);
+        }
+    }
 
     private void error(Exception e) {
         e.printStackTrace();
@@ -211,73 +244,96 @@ public class MainFrame extends JFrame {
     }
 
     private void handleKnowlagecard() {
-        Map<Object, ProgrammerCard> byName = Maps.uniqueIndex(player.getProgrammerCards(), Object::toString);
-        if (byName.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
+        List<Card> programmers = player.getNoOutsourcingProgrammerCards();
+        if (programmers.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Ogarnij sie! Nie ma programistów", "", JOptionPane.WARNING_MESSAGE);
         } else {
-            Object[] possibleValues = byName.keySet().toArray();
-            Object selectedValue = getSelectedValue(possibleValues);
-            ProgrammerCard programmerCard = byName.get(selectedValue);
-            game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
+            Card card = chooseCard(programmers, "Wybierz programiste");
+            game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, card);
         }
     }
 
     private void handleTransferCard() {
-        Map<Object, Card> byName = getOpponentsProgrammers();
-        if (byName.isEmpty()) {
+        List<Card> opponents = getOpponentsProgrammers();
+        if (opponents.isEmpty()) {
             game.putCard(player.getName(), selectedCard);
         } else {
-            Card worker = chooseWorker(byName);
+            Card worker = chooseCard(opponents, "Wybierz karte pracownika przeciwnika");
             game.putCardWithTransfer(player.getName(), selectedCard, worker);
         }
     }
 
     private void handleDarekCard() {
-        Map<Object, Card> byName = getOpponentsProgrammers();
-        if (byName.isEmpty()) {
+        List<Card> opponents = getOpponentsProgrammers();
+        if (opponents.isEmpty()) {
             game.putCard(player.getName(), selectedCard);
         } else {
-            Card worker = chooseWorker(byName);
+            Card worker = chooseCard(opponents, "Wybierz karte pracownika przeciwnika");
             game.putDarekCard(player.getName(), selectedCard, worker);
         }
     }
 
     private void handleBolekCard() {
         Card worker = null;
-        Map<Object, Card> byName = Maps.uniqueIndex(player.getWorkerCards(), Object::toString);
-        if (!byName.isEmpty()) {
+        List<Card> workers = player.getNoOutsourcingWorkerCards();
+        if (!workers.isEmpty()) {
             Object[] options = {"TAK", "NIE"};
             int option = JOptionPane.showOptionDialog(null, "Chcesz kogoś cofnąć?", "",
                     JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
                     null, options, options[0]);
             if (JOptionPane.YES_OPTION == option) {
-                worker = chooseWorker(byName);
+                worker = chooseCard(workers, "Kogo cofasz?");
             }
         }
         game.putBolekCard(player.getName(), selectedCard, worker);
     }
 
-    private Map<Object, Card> getOpponentsProgrammers() {
-        List<Card> workers = game.getOpponentsOf(player.getName()).stream()
+    private void handleAdditionalCard() {
+        AdditionalCards aditional = (AdditionalCards) selectedCard;
+        List<Card> cardsFromStack = new ArrayList<>(game.getCardsFromStack(aditional.getAll()));
+
+        List<Card> aditionalCards = new ArrayList<>();
+        for (int i = 0; i < aditional.getChoose(); i++) {
+            Card card = chooseCard(cardsFromStack, "Wybierz kartę");
+            cardsFromStack.remove(card);
+            aditionalCards.add(card);
+        }
+        game.putAditionalCards(player.getName(), selectedCard, cardsFromStack, aditionalCards);
+
+    }
+
+    private void handleResarch() {
+        List<Card> cardsFromStack = new ArrayList<>(game.getCardsFromStack(3));
+        List<Card> selectedCards = new ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            Card card = chooseCard(cardsFromStack, "Ustaw kolejność kard. Wybierz karte nr " + (i + 1) + "w kolejce");
+            selectedCards.add(card);
+            cardsFromStack.remove(card);
+        }
+        game.putCardsOnStartStack(selectedCards);
+    }
+
+    private List<Card> getOpponentsProgrammers() {
+        return game.getOpponentsOf(player.getName()).stream()
                 .map(Player::getWorkerCards)
                 .filter(l -> l.size() > 3 || !(selectedCard instanceof Rockstar))
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        return Maps.uniqueIndex(workers, Object::toString);
     }
 
 
-    private Card chooseWorker(Map<Object, Card> byName) {
+    private Card chooseCard(List<Card> cards, String message) {
+        Map<String, Card> byName = Maps.uniqueIndex(cards, Object::toString);
         Object[] possibleValues = byName.keySet().toArray();
-        Object selectedValue = getSelectedValue(possibleValues);
+        Object selectedValue = getSelectedValue(possibleValues, message);
         return byName.get(selectedValue);
     }
 
-    private Object getSelectedValue(Object[] possibleValues) {
+    private Object getSelectedValue(Object[] possibleValues, String message) {
         Object selectedValue = null;
         while (selectedValue == null) {
             selectedValue = JOptionPane.showInputDialog(this,
-                    "Wybierz pracownika?", "",
+                    message, "",
                     JOptionPane.QUESTION_MESSAGE, null,
                     possibleValues, possibleValues[0]);
         }
@@ -289,7 +345,7 @@ public class MainFrame extends JFrame {
 
         List<Card> cards;
         if (areMyCards) {
-            panel.setBorder(BorderFactory.createTitledBorder("<html><b>Moje karty w ręce</b></html>"));
+            panel.setBorder(BorderFactory.createTitledBorder("<html><b>Moje karty w ręce:" + player.getCardsOnHands().size() + "</b></html>"));
             cards = player.getCardsOnHands();
         } else {
             panel.setBorder(BorderFactory.createTitledBorder("<html><b>Karty gracza " + player.getName() + "</b></html>"));
@@ -307,7 +363,7 @@ public class MainFrame extends JFrame {
 
     private JPanel createPanel(Card card, boolean areMyCards) {
         JPanel panel = new JPanel();
-        panel.setPreferredSize(new Dimension(170, 100));
+        panel.setPreferredSize(new Dimension(180, 110));
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(BorderFactory.createTitledBorder(card.getType().getPolishName()));
 
@@ -369,8 +425,14 @@ public class MainFrame extends JFrame {
         return panel;
     }
 
-    private JLabel createPlayerLabel(Player player) {
+    private JLabel createPlayerLabelPoints(Player player) {
         JLabel label = new JLabel("<html><b>" + player.getName() + ": " + player.getPoints() + "</b></html>");
+        label.setForeground(player.getColor());
+        return label;
+    }
+
+    private JLabel createPlayerLabelResources(Player player) {
+        JLabel label = new JLabel("<html><b>" + player.getName() + ": " + player.getResources() + "</b></html>");
         label.setForeground(player.getColor());
         return label;
     }
