@@ -1,14 +1,17 @@
 package pl.gd.itstartup.core;
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import pl.gd.itstartup.core.cards.AdditionalPoints;
 import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.Worker;
+import pl.gd.itstartup.core.cards.actioncards.Outsourcing;
 import pl.gd.itstartup.core.cards.hrcards.HRCard;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
+import pl.gd.itstartup.core.cards.otherworkers.Dick;
+import pl.gd.itstartup.core.cards.programercards.FrontendDev;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
+import pl.gd.itstartup.core.cards.programercards.QAWizzard;
 
 import java.awt.*;
 import java.io.Serializable;
@@ -22,6 +25,7 @@ public class Player implements Serializable {
     private List<Card> cardsOnHands = new ArrayList<Card>();
     private List<Card> cardsOnTable = new ArrayList<Card>();
     private Multimap<Player, Card> outsourcing = HashMultimap.create();
+    private Map<Card, Integer> promotion = new HashMap<>();
     private int points = 0;
     private int resources = 0;
     private Color color;
@@ -52,6 +56,10 @@ public class Player implements Serializable {
         return cardsOnTable;
     }
 
+    public void addPromotion(Card card, Integer price) {
+        this.promotion.put(card, price);
+    }
+
     public int getPoints() {
         return points;
     }
@@ -60,12 +68,11 @@ public class Player implements Serializable {
         return resources;
     }
 
-    void addCardsToHand(List<Card> cards) {
+    public void addCardsToHand(List<Card> cards) {
         this.cardsOnHands.addAll(cards);
     }
 
-
-    void removeCardsFromTable(List<Card> cards) {
+    public void removeCardsFromTable(Collection<Card> cards) {
         this.cardsOnTable.removeAll(cards);
     }
 
@@ -73,27 +80,43 @@ public class Player implements Serializable {
         return this.cardsOnTable.contains(card);
     }
 
-    void addCardsToTable(Card card) {
+    public void addCardsToTable(Card card) {
         this.cardsOnTable.add(card);
+    }
+
+    private void addAllCardsToTable(Collection<Card> cards) {
+        this.cardsOnTable.addAll(cards);
     }
 
     void addPoints(int points) {
         this.points += points;
     }
 
-
     public void addResources(int resources) {
         this.resources += resources;
     }
 
-    private void removeResources(int resources) {
+    public void removeResources(int resources) {
         this.resources -= resources;
     }
 
     void putCard(Card selectedCard) {
-        removeResources(selectedCard.getPrice());
+        if (!(selectedCard instanceof Outsourcing)) {
+            removeResources(calculatePrice(selectedCard));
+        }
         cardsOnHands.remove(selectedCard);
         cardsOnTable.add(selectedCard);
+    }
+
+    private int calculatePrice(Card selectedCard) {
+        if (promotion.containsKey(selectedCard)) {
+            return selectedCard.getPrice() - promotion.get(selectedCard);
+        }
+        if (selectedCard instanceof ProgrammerCard) {
+            int wizards = getWizzardsards().size();
+            return selectedCard.getPrice() <= wizards ? 0 : selectedCard.getPrice() - wizards;
+        }
+        return selectedCard.getPrice();
     }
 
     List<Card> endTour() {
@@ -108,10 +131,13 @@ public class Player implements Serializable {
                 .sum());
         int programersSize = getProgrammerCards().size();
         getAdditionalCards().forEach(c -> addPoints(c.getAdditionalPoints() * programersSize));
+        Optional.of(getFrontend()).ifPresent(frontendDev -> addPoints(frontendDev.getPoints()));
 
         getCardsOnTable().forEach(Card::addBurnoutPoint);
         List<Card> burtCards = getCardsOnTable().stream().filter(Card::isBurnt).collect(Collectors.toList());
         cardsOnTable.removeAll(burtCards);
+        promotion.clear();
+        Optional.of(getFrontend()).ifPresent(FrontendDev::clearPower);
         return burtCards;
     }
 
@@ -157,6 +183,39 @@ public class Player implements Serializable {
                 .collect(Collectors.toList());
     }
 
+
+    void addOutsourcingCard(Card card, Player opponent) {
+        outsourcing.put(opponent, card);
+    }
+
+    void giveMyOutsourcingCard(Player me) {
+        if (outsourcing.containsKey(me)) {
+            Collection<Card> cards = outsourcing.get(me);
+            removeCardsFromTable(cards);
+            me.addAllCardsToTable(cards);
+            outsourcing.removeAll(me);
+        }
+    }
+
+    public boolean hasDick() {
+        return getCardsOnTable().stream().anyMatch(card -> card instanceof Dick);
+    }
+
+    public boolean hasFrontend() {
+        return getCardsOnTable().stream().anyMatch(card -> card instanceof FrontendDev);
+    }
+
+    public FrontendDev getFrontend() {
+        return (FrontendDev) getCardsOnTable().stream().filter(card -> card instanceof FrontendDev).findFirst().get();
+    }
+
+    public List<QAWizzard> getWizzardsards() {
+        return getCardsOnTable().stream()
+                .filter(card -> card instanceof QAWizzard)
+                .map(card -> (QAWizzard) card)
+                .collect(Collectors.toList());
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -179,16 +238,4 @@ public class Player implements Serializable {
                 '}';
     }
 
-    void addOutsourcingCard(Card card, Player opponent) {
-        outsourcing.put(opponent, card);
-    }
-
-    public void giveOtsourcingCard(Player opponent) {
-//        if (outsourcing.containsKey(opponent)) {
-//            Card card = outsourcing.get(opponent);
-//            removeCardsFromTable(ImmutableList.of(card));
-//            opponent.addCardsToTable(card);
-//            outsourcing.remove(opponent, card);
-//        }
-    }
 }

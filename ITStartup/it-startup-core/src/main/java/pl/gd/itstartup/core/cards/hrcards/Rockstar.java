@@ -1,6 +1,8 @@
 package pl.gd.itstartup.core.cards.hrcards;
 
-public class Rockstar extends HRCard {
+import pl.gd.itstartup.core.cards.TransferCard;
+
+public class Rockstar extends HRCard implements TransferCard {
 
 
     @Override

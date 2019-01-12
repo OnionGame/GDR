@@ -5,13 +5,13 @@ import pl.gd.itstartup.core.cards.Card;
 import pl.gd.itstartup.core.cards.DoOnStart;
 import pl.gd.itstartup.core.cards.actioncards.Outsourcing;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
+import pl.gd.itstartup.core.cards.programercards.AmbitiousIntern;
+import pl.gd.itstartup.core.cards.programercards.Ninja;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 
 import java.awt.*;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,7 +35,7 @@ public class Game implements Serializable {
 
     }
 
-    private List<Card> getCardsFromStack(int i) {
+    public List<Card> getCardsFromStack(int i) {
         List<Card> firstCards = ImmutableList.copyOf(cardsOnStack.subList(0, i));
         cardsOnStack.removeAll(firstCards);
         return firstCards;
@@ -49,8 +49,8 @@ public class Game implements Serializable {
     public Player addPlayer(String playerName) {
         Player player = new Player(playerName);
         player.setColor(colors.get(players.size()));
-        player.addPoints(100);
-        player.addCardsToHand(getCardsFromStack(10));
+        player.addResources(100);
+        player.addCardsToHand(getCardsFromStack(20));
         players.add(player);
         makeMovePlayer = player;
         return player;
@@ -77,20 +77,44 @@ public class Game implements Serializable {
         }
     }
 
-    public void putCardWithTransfer(String playerName, Card selectedCard, Card worker) {
-        Player opponent = getOpponentsOf(playerName).stream().filter(player -> player.hasCard(selectedCard)).findFirst().get();
+    public void putDarekCard(String playerName, Card selectedCard, Card worker) {//TODO Wiedzy
+        putCard(playerName, selectedCard);
+        worker.addBurnoutPoint();
+    }
+
+    public void putBolekCard(String playerName, Card selectedCard, Card worker) {//TODO Wiedzy
+        putCard(playerName, selectedCard);
+        if (worker != null) {
+            getPlayerByName(playerName).removeCardsFromTable(ImmutableList.of(worker));
+            getPlayerByName(playerName).addCardsToHand(ImmutableList.of(worker));
+        }
+    }
+
+    public void putCardWithTransfer(String playerName, Card selectedCard, Card worker) {//TODO wiedzy i blokada outsorcingowych
+        putCard(playerName, selectedCard);
+        Player opponent = getOpponent(playerName, worker);
         Player player = getPlayerByName(playerName);
         if (selectedCard instanceof Outsourcing) {
             player.addOutsourcingCard(worker, opponent);
+            opponent.addResources(selectedCard.getPrice());
         }
-        opponent.removeCardsFromTable(ImmutableList.of(worker));
-        putCard(playerName, selectedCard);
+        transferCard(playerName, worker);
 
-        player.addCardsToTable(worker);
+    }
+
+    public void transferCard(String playerName, Card card) {
+        Player opponent = getOpponent(playerName, card);
+        Player player = getPlayerByName(playerName);
+        opponent.removeCardsFromTable(ImmutableList.of(card));
+        player.addCardsToTable(card);
 
     }
 
     public void putKnowledgeCard(String playerName, KnowledgeCard selectedCard, ProgrammerCard programmerCard) {
+        if (programmerCard instanceof AmbitiousIntern || programmerCard instanceof Ninja) {
+            int resourcesToAdd = selectedCard.getPrice() > 2 ? 2 : selectedCard.getPrice();
+            getPlayerByName(playerName).addResources(resourcesToAdd);
+        }
         putCard(playerName, selectedCard);
         selectedCard.setOwner(programmerCard);
     }
@@ -106,15 +130,7 @@ public class Game implements Serializable {
         makeMovePlayer.addCardsToHand(getCardsFromStack(1));
         i++;
 
-        getOpponentsOf(playerName).forEach(p -> p.giveOtsourcingCard(player));
-    }
-
-    private int getAmountOfResources() {
-        int tourNumber = makeMovePlayer.getTourNumber();
-        if (tourNumber > 8) {
-            return 8;
-        }
-        return tourNumber;
+        getOpponentsOf(playerName).forEach(opponent -> opponent.giveMyOutsourcingCard(player));
     }
 
     public Player getMakeMovePlayer() {
@@ -131,8 +147,22 @@ public class Game implements Serializable {
 
     }
 
+    private int getAmountOfResources() {
+        int tourNumber = makeMovePlayer.getTourNumber();
+        if (tourNumber > 8) {
+            return 8;
+        }
+        return tourNumber;
+    }
+
+    private Player getOpponent(String playerName, Card worker) {
+        return getOpponentsOf(playerName).stream().filter(player -> player.hasCard(worker)).findFirst().get();
+    }
+
+
     private void returnCardsOnStack(List<Card> cards) {
         cards.forEach(Card::removeBurnout);
         cardsOnStack.addAll(cards);
     }
+
 }

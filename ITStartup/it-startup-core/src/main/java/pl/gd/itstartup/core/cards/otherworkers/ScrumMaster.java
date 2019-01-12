@@ -1,11 +1,13 @@
 package pl.gd.itstartup.core.cards.otherworkers;
 
-import pl.gd.itstartup.core.cards.AdditionalPoints;
-import pl.gd.itstartup.core.cards.Card;
-import pl.gd.itstartup.core.cards.CardType;
-import pl.gd.itstartup.core.cards.Worker;
+import pl.gd.itstartup.core.Game;
+import pl.gd.itstartup.core.Player;
+import pl.gd.itstartup.core.cards.*;
+import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
 
-public class ScrumMaster extends Card implements Worker, AdditionalPoints {
+import java.util.List;
+
+public class ScrumMaster extends Card implements Worker, AdditionalPoints, DoOnStart {
 
     public int getMaxBurnoutPoints() {
         return 4;
@@ -23,6 +25,7 @@ public class ScrumMaster extends Card implements Worker, AdditionalPoints {
     public CardType getType() {
         return CardType.SCRUM_MASTER;
     }
+
     @Override
     public int howManyExistInPack() {
         return 2;
@@ -31,5 +34,11 @@ public class ScrumMaster extends Card implements Worker, AdditionalPoints {
     @Override
     public int getAdditionalPoints() {
         return 1;
+    }
+
+    @Override
+    public void doStaff(Player player, Game game) {
+        List<Card> cards = game.getCardsFromStack(player.getProgrammerCards().size());
+        player.addCardsToHand(cards);
     }
 }

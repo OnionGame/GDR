@@ -1,6 +1,6 @@
 package pl.gd.itstartup.core.cards.programercards;
 
-public class FullStack extends ProgrammerCard {
+public class Ninja extends ProgrammerCard {
 
     @Override
     public int getPrice() {

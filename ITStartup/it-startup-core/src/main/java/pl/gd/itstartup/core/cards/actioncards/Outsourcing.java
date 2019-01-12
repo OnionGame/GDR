@@ -1,6 +1,8 @@
 package pl.gd.itstartup.core.cards.actioncards;
 
-public class Outsourcing extends ActionCard {
+import pl.gd.itstartup.core.cards.TransferCard;
+
+public class Outsourcing extends ActionCard implements TransferCard {
 
     public int getPrice() {
         return 2;

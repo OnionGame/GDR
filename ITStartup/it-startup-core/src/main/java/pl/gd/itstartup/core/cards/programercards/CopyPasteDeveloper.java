@@ -29,6 +29,6 @@ public class CopyPasteDeveloper extends ProgrammerCard implements DoOnStart {
 
     @Override
     public void doStaff(Player player, Game game) {
-        player.getCardsOnHands().forEach(Card::addBurnoutPoint);
+        player.getCardsOnTable().forEach(Card::addBurnoutPoint);
     }
 }

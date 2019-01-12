@@ -4,10 +4,12 @@ import com.google.common.collect.Maps;
 import pl.gd.itstartup.core.Game;
 import pl.gd.itstartup.core.Player;
 import pl.gd.itstartup.core.cards.Card;
+import pl.gd.itstartup.core.cards.TransferCard;
 import pl.gd.itstartup.core.cards.actioncards.ActionCard;
-import pl.gd.itstartup.core.cards.actioncards.HeadHunter;
 import pl.gd.itstartup.core.cards.hrcards.Rockstar;
 import pl.gd.itstartup.core.cards.knownlagecards.KnowledgeCard;
+import pl.gd.itstartup.core.cards.programercards.Bolek;
+import pl.gd.itstartup.core.cards.programercards.Darek;
 import pl.gd.itstartup.core.cards.programercards.ProgrammerCard;
 import pl.gd.itstartup.rmi.ITStartupRMIServerInterface;
 
@@ -17,10 +19,8 @@ import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.rmi.RemoteException;
-import java.util.Collection;
-import java.util.Enumeration;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MainFrame extends JFrame {
@@ -31,6 +31,7 @@ public class MainFrame extends JFrame {
     private JPanel descriptionPanel;
     private JPanel selectedPanel;
     private boolean isSelected = false;
+    private boolean wasRandom = false;
     private ITStartupRMIServerInterface server;
 
     public MainFrame(String playerName, ITStartupRMIServerInterface server) throws RemoteException {
@@ -42,7 +43,7 @@ public class MainFrame extends JFrame {
             throw new RuntimeException(e);
         }
         this.server = server;
-        this.game = server.getGame();     //   game = new Game();
+        this.game = server.getGame();
         this.player = game.addPlayer(playerName);
         setTitle(player.getName());
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -55,7 +56,7 @@ public class MainFrame extends JFrame {
 
     }
 
-    public void refresh() {
+    public void refresh() throws RemoteException {
         try {
             game = server.getGame();
             player = game.getPlayerByName(player.getName());
@@ -70,6 +71,7 @@ public class MainFrame extends JFrame {
         revalidate();
         repaint();
     }
+
 
     private void createCenterPanel() {
         cardsPanel = new JPanel();
@@ -97,15 +99,26 @@ public class MainFrame extends JFrame {
         JPanel buttonsPanel = new JPanel(new FlowLayout());
         JButton endTour = new JButton("Koniec Tury");
         JButton putButton = new JButton("Połóż na stół");
-        endTour.setEnabled(game.getMakeMovePlayer().equals(player));
-        putButton.setEnabled(game.getMakeMovePlayer().equals(player));
+        JButton randomButton = new JButton("Losuj za 1 zasób");
+        JButton frontendDev = new JButton("+1 Zasób dla Nieasertywnego Deva");
+
+        boolean isEnabled = game.getMakeMovePlayer().equals(player);
+        endTour.setEnabled(isEnabled);
+        putButton.setEnabled(isEnabled);
+        randomButton.setVisible(isEnabled && player.hasDick() && player.getResources() > 0 && !wasRandom);
+        frontendDev.setVisible(isEnabled && player.hasFrontend() && player.getResources() > 0 && !wasRandom);
+
         putButton.addActionListener(e -> onPut());
         endTour.addActionListener(e -> onEnd());
+        randomButton.addActionListener(e -> onRandom());
+        frontendDev.addActionListener(e -> onAddFrontend());
 
         buttonsPanel.add(new JLabel("Tura numer: " + player.getTourNumber()));
         buttonsPanel.add(new JLabel("Ruch wykonuje: " + game.getMakeMovePlayer().getName()));
         buttonsPanel.add(putButton);
         buttonsPanel.add(endTour);
+        buttonsPanel.add(randomButton);
+        buttonsPanel.add(frontendDev);
 
 
         JPanel statistics = new JPanel();
@@ -131,9 +144,10 @@ public class MainFrame extends JFrame {
             if (JOptionPane.YES_OPTION == option) {
                 game.end(player.getName());
             }
+            wasRandom = false;
             server.refresh(game);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "", JOptionPane.ERROR_MESSAGE);
+            error(e);
         }
     }
 
@@ -142,15 +156,58 @@ public class MainFrame extends JFrame {
 
             if (selectedCard instanceof KnowledgeCard) {
                 handleKnowlagecard();
-            } else if (selectedCard instanceof Rockstar || selectedCard instanceof HeadHunter) {
+            } else if (selectedCard instanceof TransferCard) {
                 handleTransferCard();
+            } else if (selectedCard instanceof Darek) {
+                handleDarekCard();
+            } else if (selectedCard instanceof Bolek) {
+                handleBolekCard();
             } else {
                 game.putCard(player.getName(), selectedCard);
             }
             server.refresh(game);
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, e, "", JOptionPane.ERROR_MESSAGE);
+            error(e);
         }
+    }
+
+    private void onRandom() {
+        try {
+            Map<Object, Card> byName = getOpponentsProgrammers();
+            if (!byName.isEmpty()) {
+                if (new Random().nextBoolean()) {
+                    JOptionPane.showMessageDialog(this, "Wygrana:)", "", JOptionPane.INFORMATION_MESSAGE);
+                    Card card = chooseWorker(byName);
+                    game.getPlayerByName(player.getName()).removeResources(1);
+                    game.transferCard(player.getName(), card);
+
+                } else {
+                    JOptionPane.showMessageDialog(this, "Przegrana:(", "", JOptionPane.INFORMATION_MESSAGE);
+                }
+                wasRandom = true;
+                server.refresh(game);
+            } else {
+                JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            error(e);
+        }
+    }
+
+    private void onAddFrontend() {
+        try {
+            game.getPlayerByName(player.getName()).removeResources(1);
+            game.getPlayerByName(player.getName()).getFrontend().addPower();
+            server.refresh(game);
+        } catch (Exception e) {
+            error(e);
+        }
+    }
+
+
+    private void error(Exception e) {
+        e.printStackTrace();
+        JOptionPane.showMessageDialog(this, e, "", JOptionPane.ERROR_MESSAGE);
     }
 
     private void handleKnowlagecard() {
@@ -159,33 +216,72 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Ogarnij się", "", JOptionPane.ERROR_MESSAGE);
         } else {
             Object[] possibleValues = byName.keySet().toArray();
-            Object selectedValue = JOptionPane.showInputDialog(this,
-                    "Do kogo przypisać?", "",
-                    JOptionPane.QUESTION_MESSAGE, null,
-                    possibleValues, possibleValues[0]);
+            Object selectedValue = getSelectedValue(possibleValues);
             ProgrammerCard programmerCard = byName.get(selectedValue);
             game.putKnowledgeCard(player.getName(), (KnowledgeCard) selectedCard, programmerCard);
         }
     }
 
     private void handleTransferCard() {
+        Map<Object, Card> byName = getOpponentsProgrammers();
+        if (byName.isEmpty()) {
+            game.putCard(player.getName(), selectedCard);
+        } else {
+            Card worker = chooseWorker(byName);
+            game.putCardWithTransfer(player.getName(), selectedCard, worker);
+        }
+    }
+
+    private void handleDarekCard() {
+        Map<Object, Card> byName = getOpponentsProgrammers();
+        if (byName.isEmpty()) {
+            game.putCard(player.getName(), selectedCard);
+        } else {
+            Card worker = chooseWorker(byName);
+            game.putDarekCard(player.getName(), selectedCard, worker);
+        }
+    }
+
+    private void handleBolekCard() {
+        Card worker = null;
+        Map<Object, Card> byName = Maps.uniqueIndex(player.getWorkerCards(), Object::toString);
+        if (!byName.isEmpty()) {
+            Object[] options = {"TAK", "NIE"};
+            int option = JOptionPane.showOptionDialog(null, "Chcesz kogoś cofnąć?", "",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE,
+                    null, options, options[0]);
+            if (JOptionPane.YES_OPTION == option) {
+                worker = chooseWorker(byName);
+            }
+        }
+        game.putBolekCard(player.getName(), selectedCard, worker);
+    }
+
+    private Map<Object, Card> getOpponentsProgrammers() {
         List<Card> workers = game.getOpponentsOf(player.getName()).stream()
                 .map(Player::getWorkerCards)
                 .filter(l -> l.size() > 3 || !(selectedCard instanceof Rockstar))
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
-        Map<Object, Card> byName = Maps.uniqueIndex(workers, Object::toString);
-        if (byName.isEmpty()) {
-            game.putCard(player.getName(), selectedCard);
-        } else {
-            Object[] possibleValues = byName.keySet().toArray();
-            Object selectedValue = JOptionPane.showInputDialog(this,
-                    "Kogo chcesz zabrać?", "",
+        return Maps.uniqueIndex(workers, Object::toString);
+    }
+
+
+    private Card chooseWorker(Map<Object, Card> byName) {
+        Object[] possibleValues = byName.keySet().toArray();
+        Object selectedValue = getSelectedValue(possibleValues);
+        return byName.get(selectedValue);
+    }
+
+    private Object getSelectedValue(Object[] possibleValues) {
+        Object selectedValue = null;
+        while (selectedValue == null) {
+            selectedValue = JOptionPane.showInputDialog(this,
+                    "Wybierz pracownika?", "",
                     JOptionPane.QUESTION_MESSAGE, null,
                     possibleValues, possibleValues[0]);
-            Card worker = byName.get(selectedValue);
-            game.putCardWithTransfer(player.getName(), selectedCard, worker);
         }
+        return selectedValue;
     }
 
     private JPanel createCardsPanel(Player player, boolean areMyCards) {

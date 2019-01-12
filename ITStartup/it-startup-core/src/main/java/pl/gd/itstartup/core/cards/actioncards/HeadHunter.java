@@ -1,6 +1,8 @@
 package pl.gd.itstartup.core.cards.actioncards;
 
-public class HeadHunter extends ActionCard {
+import pl.gd.itstartup.core.cards.TransferCard;
+
+public class HeadHunter extends ActionCard implements TransferCard {
 
     @Override
     public int getPrice() {
