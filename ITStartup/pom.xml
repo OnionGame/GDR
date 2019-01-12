@@ -23,6 +23,8 @@
     <modules>
         <module>it-startup-core</module>
         <module>it-startup-swing-client</module>
+        <module>it-startup-rmi-api</module>
+        <module>it-startup-rmi-server</module>
     </modules>
 
     <dependencies>
@@ -30,12 +32,6 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>19.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.9.10</version>
         </dependency>
 
     </dependencies>

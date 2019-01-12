@@ -5,7 +5,7 @@ import pl.gd.itstartup.swing.MainFrame;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class ITStartupRMIClientImpl extends UnicastRemoteObject implements pl.gd.itstartup.rmi.ITStartupRMIClientInterface {
+public class ITStartupRMIClientImpl extends UnicastRemoteObject implements ITStartupRMIClientInterface {
 
     MainFrame frame;
 

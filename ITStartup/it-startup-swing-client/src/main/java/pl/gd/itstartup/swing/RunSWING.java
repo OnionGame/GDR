@@ -13,7 +13,8 @@ public class RunSWING {
     public static void main(String a[]) {
         MainFrame mainFrame = null;
         try {
-            ITStartupRMIServerInterface server = (ITStartupRMIServerInterface) Naming.lookup("rmi://localhost/itstartup");
+            ITStartupRMIServerInterface server =
+                    (ITStartupRMIServerInterface) Naming.lookup("rmi://192.168.0.157/itstartup");
 
             mainFrame = new MainFrame("Grzesio" + new Random().nextInt(), server);
             ITStartupRMIClientInterface client = new ITStartupRMIClientImpl(mainFrame);
